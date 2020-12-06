@@ -37,7 +37,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'forecast',
     'django_plotly_dash.apps.DjangoPlotlyDashConfig',
-    'app',  # Enable the inner app 
+    'app'    
 ]
 
 MIDDLEWARE = [
@@ -133,3 +133,8 @@ STATICFILES_DIRS = (
 )
 #############################################################
 #############################################################
+
+CELERY_BROKER_URL= 'redis://127.0.0.1:6379/0'
+BROKER_TRANSPORT = 'redis'
+
+REDIS_URL='redis://127.0.0.1:6379/0'

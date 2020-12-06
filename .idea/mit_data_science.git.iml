@@ -8,8 +8,10 @@
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
   <component name="PackageRequirementsSettings">
-    <option name="requirementsPath" value="C:\Users\thewr\infnet\black-dashboard\requirements.txt" />
+    <option name="requirementsPath" value="C:\Users\thewr\git\mit_data_science.git\requirements.txt" />
     <option name="versionSpecifier" value="Strong equality (==x.y.z)" />
+    <option name="removeUnused" value="true" />
+    <option name="keepMatchingSpecifier" value="false" />
   </component>
   <component name="PyDocumentationSettings">
     <option name="format" value="PLAIN" />

@@ -1,0 +1,14 @@
+pandas==1.1.0
+numpy==1.19.1
+dash==1.14.0
+nbconvert==5.6.1
+plotly==4.9.0
+dash_core_components==1.10.2
+Unipath==1.1
+django_plotly_dash==1.4.2
+Django==3.1
+dash_html_components==1.0.3
+nbformat==5.0.7
+dj_database_url==0.4.1
+djangorestframework==3.11.1
+python-decouple==3.3

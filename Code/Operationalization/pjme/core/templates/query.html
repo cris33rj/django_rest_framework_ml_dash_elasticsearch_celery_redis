@@ -1,0 +1,69 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %} UI Icons {% endblock %} 
+
+<!-- Specific Page CSS goes HERE  -->
+{% block stylesheets %}{% endblock stylesheets %}
+
+{% block content %}
+
+<div class="row">
+  <div class="col-md-12">
+    <nav class="navbar navbar-light bg-light">
+      <form class="form-inline" action={% url 'query_form' %} >
+        {% csrf_token %}
+        <input 
+        class="form-control mr-sm-2" 
+        type="search" placeholder="First date" 
+        aria-label="First date"
+        name = 'first_date'
+        value = "">
+        <input 
+        class="form-control mr-sm-2" 
+        type="search" placeholder="Last date" 
+        aria-label="Last date"
+        name = 'last_date'
+        value = "">
+        <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button>
+      </form>
+    </nav>
+    
+    {% if results %}
+          <div class="txtCentrado margenSup20 grisDC">
+              <h3>We found {{ count }} result{{ count|pluralize }} for your query in Elasticsearch </h3>
+               </div>
+                   <div style= "color:#ffff">
+                    <table style="width:50%">
+                      <tr>
+                      <th style="text-align:center">Date</th>
+                      <th style="text-align:center">Total consumption in MW</th>
+                      <!-- <th>Zone</th>
+                      <th>Flag</th>
+                      <th>Energy type</th> -->
+                      </tr>
+                       {% for mytuple in results %}
+                  <div>                    
+                      <tr>                        
+                      <td align="center">{{ mytuple.0 }}</td>
+                      <td align="center">{{ mytuple.1 }}</td>
+                      <!-- <td>{{ mytuple.2 }}</td>
+                      <td>{{ mytuple.3 }}</td>
+                      <td>{{ mytuple.4 }}</td>  -->               
+                      </tr>                  
+                </div>
+                <p></p>
+               {% endfor %}
+              </table>
+            </div>
+    {%elif not search_term %}
+        <h3>Insert your query in Elasticsearch here.</h3>
+    {%elif not results %}
+        <p>No results found.</p>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock content %}
+
+<!-- Specific Page JS goes HERE  -->
+{% block javascripts %}{% endblock javascripts %}

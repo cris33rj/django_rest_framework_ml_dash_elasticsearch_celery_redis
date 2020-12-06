@@ -15,6 +15,11 @@ import pickle
 
 import nbformat
 from nbconvert.preprocessors import ExecutePreprocessor
+
+import elasticsearch
+
+from .tasks import elk_insertion
+
 PROJECT_FOLDER = 'C:/Users/thewr/git/mit_data_science.git/'
 
 def dashboard_home(requests):
@@ -54,7 +59,8 @@ class UpdateModels(APIView):
             # Read database from pipeline_training
             data_proc_file = PROJECT_FOLDER + '/Data/Processed/energy_consumption_data_modeling.parquet'
             data = pd.read_parquet(data_proc_file)
-            data = data.copy()
+            data = data.copy()    
+            #elk_insertion.delay()                 
             # Loop over forecast samples
             measurement_list = []
             for irow, row in data.iterrows():
@@ -63,13 +69,14 @@ class UpdateModels(APIView):
                     measurement = Measurements(date=row.Datetime,                                         
                                                 PJME_MW= row.PJME_MW)                                         
                     measurement_list.append(measurement)
+                    elk_insertion.delay(row.Datetime,row.PJME_MW)                     
 
             # Bulk insert
             if len(measurement_list):
                 Measurements.objects.bulk_create(measurement_list)
 
             serial_data = MeasurementsSerializer(measurement_list,
-                                             many=True,context={'request': request})   
+                                             many=True,context={'request': request})                                               
 
             return Response(serial_data.data, status=status.HTTP_200_OK)
 
@@ -267,3 +274,162 @@ class ForecastEvaluation(APIView):
 
     except Exception as err:
         return Response('Detailed Error: ' + err.__str__(), status = status.HTTP_400_BAD_REQUEST)
+
+class ESQueryView(APIView):
+  
+  def get(self, request):
+
+    try:   
+
+        client = elasticsearch.Elasticsearch('localhost:9200')
+        
+        query =  {
+            "query": {
+                "query_string": {
+                    "query": request.query_params['q'],
+                }
+            }
+        }
+
+        response = client.search(index="pjme_energy_consumption", body=query)
+
+        import time
+        time.sleep(5)
+
+        return Response(response['hits']['hits'],status=status.HTTP_200_OK)
+
+        """ logging.info('terminou de atualizar os forecasts com os mearuments novos do banco.')
+        forecasts_updated = Forecasts.objects.filter(forecast_model = forecast_model_evaluated)             
+        serial_data = ForecastsSerializer(forecasts_updated,
+                                        many=True,
+                                        context={'request': request}) """
+
+        # return Response(serial_data.data,status=status.HTTP_200_OK)
+
+    except Exception as err:
+        return Response('Detailed Error: ' + err.__str__(), status = status.HTTP_400_BAD_REQUEST)
+
+
+class ESDocumentView(APIView):
+  
+  def post(self, request):
+
+    try:   
+
+        # Importando tarefa a ser executada
+        from exemplo_elk.users.tasks import insert_es
+
+        print(request.data)
+
+        insert_es.delay(request.data)
+
+        return Response({"status": "ok"})
+
+    except Exception as err:
+        return Response('Detailed Error: ' + err.__str__(), status = status.HTTP_400_BAD_REQUEST)
+
+
+
+  
+def query_form_process(request):
+    results = []
+    print("####request.data#####\n", request)
+    inicio = ""
+    final = ""
+    if request.GET.get('first_date') and request.GET.get('last_date'):
+        inicio = request.GET['first_date']
+        final = request.GET['last_date']
+    elif request.GET.get('first_date'):
+        inicio = request.GET['first_date']
+    elif request.GET.get('last_date'):
+        final = request.GET['last_date']
+    search_term = inicio or final
+    print("####test#####\n", search_term)
+    results = esearch(dt_inicio = inicio, dt_fim=final)
+    print(results)
+    context = {'results': results, 'count': len(results), 'search_term': search_term }
+    return render(request, 'query.html', context)
+
+
+def esearch(dt_inicio="", dt_fim=""):
+    
+    query = {
+                "aggs": {
+                "totais_diarios_consumo_energia": {
+                "date_histogram": {
+                    "field": "date",
+                    "fixed_interval": "24h",
+                    "time_zone": "America/Sao_Paulo",
+                    "min_doc_count": 1
+                },
+                "aggs": {
+                    "consumo_total_do_dia": {
+                    "sum": {
+                        "field": "pjme_mw"
+                    }
+                    }
+                }
+                }
+            },
+            "size": 0,
+            "stored_fields": [
+                "*"
+            ],
+            "script_fields": {},
+            "docvalue_fields": [
+                {
+                "field": "date",
+                "format": "date_time"
+                }
+            ],
+            "_source": {
+                "excludes": []
+            },
+            "query": {
+                "bool": {
+                "must": [],
+                "filter": [
+                    {
+                    "match_all": {}
+                    },
+                    {
+                    "range": {
+                        "date": {
+                        "gte": dt_inicio,
+                        "lte": dt_fim,
+                        "format": "strict_date_optional_time"
+                        }
+                    }
+                    }
+                ],
+                "should": [],
+                "must_not": []
+                }
+            }
+            }
+    client = elasticsearch.Elasticsearch('localhost:9200')
+    response = client.search(index="pjme_energy_consumption", body=query)
+    print("####test#####\n", response)          
+
+    search = get_results(response)
+    return search
+
+def get_results(response):
+    results = []
+
+    for doc in response['aggregations']['totais_diarios_consumo_energia']['buckets']:
+        data = datetime.strptime(doc['key_as_string'], '%Y-%m-%dT%H:%M:%S.%f%z').date()
+        #data = pd.datetime(doc['key_as_string'])  
+        data_invertida = data.strftime('%d-%m-%Y')
+        consumo = int(doc['consumo_total_do_dia']['value'])
+        result_tuple = (data_invertida, consumo)
+        results.append(result_tuple)
+    """ for hit in response:
+        result_tuple = (hit.date, str(hit.pjme_mw), hit.zone, hit.flag, hit.energy_type)
+        results.append(result_tuple) """
+    print("####MPRIMINDO RESULTS#####\n")
+        
+    return results
+
+ 
+

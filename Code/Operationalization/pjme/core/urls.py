@@ -24,14 +24,10 @@ urlpatterns = [
     url(r'^train_models/', views.TrainModels.as_view()),
     url(r'^update_models/', views.UpdateModels.as_view()),
     url(r'^forecast_energy/', views.ForecastEnergy.as_view()),
+    url(r'^query/', views.ESQueryView.as_view()),    
     url(r'^forecast_evaluation/', views.ForecastEvaluation.as_view()),
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
-	  path('dash/', views.dashboard_home, name="dashboard"),
-    path('django_plotly_dash/', include('django_plotly_dash.urls'))] 
-
-
-
-
-
-
-
+	path('dash/', views.dashboard_home, name="dashboard"),
+    path('django_plotly_dash/', include('django_plotly_dash.urls')),
+    path('query_form/', views.query_form_process, name='query_form')] 
+    

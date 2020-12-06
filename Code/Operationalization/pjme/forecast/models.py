@@ -2,6 +2,7 @@
 
 
 from django.db import models
+from .tasks import elk_insertion_single_registry
 
 # Create your models here.
 
@@ -17,7 +18,12 @@ class Measurements(models.Model):
     PJME_MW = models.FloatField(default=0, null=False) 
 
     def natural_key(self):
-        return (self.date, self.PJME_MW)   
+        return (self.date, self.PJME_MW)
+
+    def save (self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        print(self.date, self.PJME_MW)
+        elk_insertion_single_registry.delay(self.id)           
 
     
 class ForecastModels(models.Model):
